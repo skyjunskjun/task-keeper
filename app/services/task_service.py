@@ -1,17 +1,12 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models import Tag, Task
 
 
 def list_tasks(db: Session) -> list[Task]:
-    # 버그: 태그를 즉시 로딩하지 않습니다.
-    # 응답을 직렬화할 때 각 할 일의 task.tags에 접근하면 태그 조회 쿼리가
-    # 할 일 개수만큼 추가로 실행됩니다(N+1). 할 일이 늘수록 GET /tasks 가 느려집니다.
-    #
-    # 수정 방향:
-    #   from sqlalchemy.orm import selectinload
-    #   tasks = db.query(Task).options(selectinload(Task.tags)).all()
-    tasks = db.query(Task).all()
+    # selectinload로 모든 할 일의 태그를 한 번의 추가 쿼리(IN 절)로 미리 가져와
+    # 직렬화 시 task.tags 접근마다 쿼리가 실행되는 N+1 문제를 막습니다.
+    tasks = db.query(Task).options(selectinload(Task.tags)).all()
     return tasks
 
 
